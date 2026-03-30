@@ -29,7 +29,7 @@ async function dbConnect() {
   try {
     cached.conn = await cached.promise;
   } catch (e) {
-    console.error("MongoDB Connection Failed (Quota or URI):", e.message);
+    console.error("MongoDB Connection Failed (Quota or URI):", e instanceof Error ? e.message : e);
     cached.promise = null; // Allow retry or just keep returning null
     return null;
   }

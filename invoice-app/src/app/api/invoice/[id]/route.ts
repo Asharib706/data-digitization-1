@@ -6,8 +6,9 @@ import { Types } from "mongoose";
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await auth();
   if (!session?.user?.name) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const username = session.user.name;
@@ -15,7 +16,7 @@ export async function DELETE(
   try {
     await dbConnect();
     const result = await Invoice.deleteOne({
-      _id: new Types.ObjectId(params.id),
+      _id: new Types.ObjectId(id),
       username,
     });
     if (result.deletedCount === 0) {
