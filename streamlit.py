@@ -47,7 +47,7 @@ def verify_password(password, hashed_password):
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
 
-def extract_invoice_data(image_bytes, model_name="gemini-2.0-flash-exp"):
+def extract_invoice_data(image_bytes, model_name="gemini-2.0-flash"):
     
     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
         temp_file.write(image_bytes)
