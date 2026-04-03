@@ -234,59 +234,6 @@ export default function InvoicesPage() {
       {/* ── DESKTOP: Table ── */}
       {!loading && !dbError && invoices.length > 0 && (
         <>
-          <div className="inv-table-wrap desktop-only">
-            <table className="inv-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Vendor</th>
-                  <th>Invoice No.</th>
-                  <th>Date</th>
-                  <th>Sub-total</th>
-                  <th>TPS</th>
-                  <th>TVQ</th>
-                  <th>Tax</th>
-                  <th>Discount</th>
-                  <th>Total</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv, i) => (
-                  <motion.tr
-                    key={inv.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                    className="inv-table-row"
-                  >
-                    <td className="inv-num-cell">{i + 1}</td>
-                    <td>
-                      <div className="inv-vendor-cell">
-                        <div className="inv-vendor-avatar">{(inv.vendor_name || "?").substring(0, 2).toUpperCase()}</div>
-                        <span className="inv-vendor-name">{inv.vendor_name || <em style={{ color: "var(--ink-3)" }}>Unknown</em>}</span>
-                      </div>
-                    </td>
-                    <td><span className="inv-badge">{inv.invoice_number || "—"}</span></td>
-                    <td>{inv.invoice_date || "—"}</td>
-                    <td>{fmtAmount(inv.sub_total)}</td>
-                    <td className="inv-tax-cell">{fmtAmount(inv.tps)}</td>
-                    <td className="inv-tax-cell">{fmtAmount(inv.tvq)}</td>
-                    <td className="inv-tax-cell">{fmtAmount(inv.tax)}</td>
-                    <td className="inv-tax-cell">{fmtAmount(inv.discount)}</td>
-                    <td><span className="inv-total-cell">{fmtAmount(inv.total_price)}</span></td>
-                    <td>
-                      <div className="inv-row-actions">
-                        <button className="icon-btn edit-btn" title="Edit" onClick={() => openEdit(inv)}>✏️</button>
-                        <button className="icon-btn delete-btn" title="Delete" onClick={() => setDeleteTarget(inv)}>🗑️</button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
           {/* ── MOBILE: Cards ── */}
           <div className="inv-card-list mobile-only">
             {invoices.map((inv, i) => (
