@@ -64,19 +64,7 @@ export async function GET() {
       })),
     });
   } catch (e) {
-    console.error("Dashboard DB Error, returning mock data", e);
-    return NextResponse.json({
-      stats: { totalInvoices: 142, totalSpend: 84300, totalTax: 6200, avgDiscount: "3.1%" },
-      recentInvoices: [
-        { id: "1", vendor: "Sysco Foods", invoiceNumber: "INV-0041", date: "03/24/2025", total: 1240 },
-        { id: "2", vendor: "Office Depot", invoiceNumber: "INV-0040", date: "03/22/2025", total: 394.5 },
-        { id: "3", vendor: "Amazon Business", invoiceNumber: "INV-0039", date: "03/19/2025", total: 2875 },
-      ],
-      topVendors: [
-        { name: "Amazon", totalSpend: 32100, barPercent: 82 },
-        { name: "Sysco", totalSpend: 18400, barPercent: 54 },
-        { name: "Office Depot", totalSpend: 9200, barPercent: 28 },
-      ],
-    });
+    console.error("Dashboard DB Error:", e);
+    return NextResponse.json({ error: "db_error", message: "Unable to connect to database. Please check your connection." }, { status: 503 });
   }
 }

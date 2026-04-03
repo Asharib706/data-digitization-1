@@ -36,18 +36,26 @@ export async function GET(req: Request) {
         ? new Date(inv.invoice_date.replace(/(\d+)\/(\d+)\/(\d+)/, "$3-$1-$2"))
         : new Date();
       const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+      const tps = inv.tps || 0;
+      const tvq = inv.tvq || 0;
+      // Fix: recalculate tax as tps + tvq if stored tax is 0 but tps/tvq are set
+      const storedTax = inv.tax || 0;
+      const tax = storedTax > 0 ? storedTax : tps + tvq;
+
       return {
         month,
         vendor_name: inv.vendor_name || "Unknown",
         sub_total: inv.sub_total || 0,
-        tps: inv.tps || 0,
-        tvq: inv.tvq || 0,
-        tax: inv.tax || 0,
+        tps,
+        tvq,
+        tax,
         total_price: inv.total_price || 0,
         discount: inv.discount || 0,
       };
     });
 
+    // Apply month filter
     const filtered = monthFilter ? rows.filter((r) => r.month === monthFilter) : rows;
 
     // Group by month + vendor
@@ -86,19 +94,38 @@ export async function GET(req: Request) {
 
     if (exportXlsx) {
       const wb = XLSX.utils.book_new();
+
+      // Fix: use filtered rows for the detail sheet (respects month filter)
+      const filteredInvoices = monthFilter
+        ? allInvoices.filter((inv) => {
+            const date = inv.invoice_date
+              ? new Date(inv.invoice_date.replace(/(\d+)\/(\d+)\/(\d+)/, "$3-$1-$2"))
+              : new Date();
+            const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+            return month === monthFilter;
+          })
+        : allInvoices;
+
       const detailSheet = XLSX.utils.json_to_sheet(
-        allInvoices.map((inv) => ({
-          Invoice_Number: inv.invoice_number,
-          Date: inv.invoice_date,
-          Vendor: inv.vendor_name,
-          Sub_Total: inv.sub_total,
-          TPS: inv.tps,
-          TVQ: inv.tvq,
-          Tax: inv.tax,
-          Total_Price: inv.total_price,
-          Discount: inv.discount,
-        }))
+        filteredInvoices.map((inv) => {
+          const tps = inv.tps || 0;
+          const tvq = inv.tvq || 0;
+          const storedTax = inv.tax || 0;
+          const tax = storedTax > 0 ? storedTax : tps + tvq;
+          return {
+            Invoice_Number: inv.invoice_number || "",
+            Date: inv.invoice_date || "",
+            Vendor: inv.vendor_name || "",
+            Sub_Total: (inv.sub_total || 0).toFixed(2),
+            TPS: tps.toFixed(2),
+            TVQ: tvq.toFixed(2),
+            Tax: tax.toFixed(2),
+            Total_Price: (inv.total_price || 0).toFixed(2),
+            Discount: (inv.discount || 0).toFixed(2),
+          };
+        })
       );
+
       const summarySheet = XLSX.utils.json_to_sheet(
         summaryRows.map((r) => ({
           Month: r.month,
@@ -111,26 +138,27 @@ export async function GET(req: Request) {
           Discount: r.discount.toFixed(2),
         }))
       );
+
+      const sheetName = monthFilter ? `Summary ${monthFilter}` : "Summary by Month";
       XLSX.utils.book_append_sheet(wb, detailSheet, "Invoice Details");
-      XLSX.utils.book_append_sheet(wb, summarySheet, "Summary by Month");
+      XLSX.utils.book_append_sheet(wb, summarySheet, sheetName);
       const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+      const filename = monthFilter
+        ? `summary_${monthFilter}.xlsx`
+        : "summary_all.xlsx";
 
       return new Response(buf, {
         headers: {
           "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="summary_output.xlsx"`,
+          "Content-Disposition": `attachment; filename="${filename}"`,
         },
       });
     }
 
     return NextResponse.json({ summaryRows, availableMonths });
   } catch (e) {
-    console.error("Summary DB Error, returning mock data", e);
-    const mockRows = [
-      { month: "2025-01", vendor_name: "Amazon", sub_total: 4200, tps: 210, tvq: 418, tax: 628, total_price: 4828, discount: 0 },
-      { month: "2025-01", vendor_name: "Sysco", sub_total: 1800, tps: 90, tvq: 179, tax: 269, total_price: 2069, discount: 50 },
-      { month: "2025-01", vendor_name: "Total for Month", sub_total: 6000, tps: 300, tvq: 597, tax: 269, total_price: 6897, discount: 50, isTotal: true },
-    ];
-    return NextResponse.json({ summaryRows: mockRows, availableMonths: ["2025-01", "2025-02", "2025-03"] });
+    console.error("Summary DB Error:", e);
+    return NextResponse.json({ error: "db_error", message: "Unable to connect to database. Please check your connection." }, { status: 503 });
   }
 }
