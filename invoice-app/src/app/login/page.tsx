@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,15 +11,31 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await signIn("credentials", { username, password, redirect: false });
-    setLoading(false);
-    if (res?.ok) {
-      router.push("/dashboard");
-    } else {
+    
+    try {
+      const res = await signIn("credentials", { username, password, redirect: false });
+      setLoading(false);
+      
+      if (res?.error) {
+        setError("Invalid username or password.");
+      } else if (res?.ok || !res) {
+        router.push("/dashboard");
+      } else {
+        setError("Invalid username or password.");
+      }
+    } catch (err) {
+      setLoading(false);
       setError("Invalid username or password.");
     }
   }
@@ -75,9 +91,37 @@ export default function LoginPage() {
               />
             </div>
 
+            {/* Floating Toast for errors */}
             {error && (
-              <div style={{ fontSize: 13, color: "var(--red)", marginBottom: 12, padding: "10px 12px", background: "var(--red-dim)", borderRadius: "var(--radius-sm)", border: "0.5px solid rgba(214,59,59,0.2)" }}>
+              <div style={{ 
+                position: "fixed", 
+                top: 20, 
+                right: 20, 
+                zIndex: 9999, 
+                padding: "14px 24px", 
+                background: "var(--red)", 
+                color: "white", 
+                borderRadius: "var(--radius-sm)", 
+                boxShadow: "0 8px 30px rgba(214,59,59,0.3)",
+                fontSize: 14,
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                animation: "toast-in 0.3s ease-out forwards"
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
                 {error}
+                <style>{`
+                  @keyframes toast-in {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                  }
+                `}</style>
               </div>
             )}
 
