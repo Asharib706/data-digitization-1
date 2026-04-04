@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,7 +28,15 @@ export default function UploadPage() {
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -52,6 +60,7 @@ export default function UploadPage() {
     setResult(null);
     setShowSuccess(false);
     setExtracting(false);
+    setError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -62,6 +71,7 @@ export default function UploadPage() {
     setMessage("Initializing...");
     setResult(null);
     setShowSuccess(false);
+    setError("");
 
     // Generate image preview
     if (selectedFile.type.startsWith("image/")) {
@@ -100,7 +110,11 @@ export default function UploadPage() {
                 router.refresh();
               }, 4000);
             } else if (data.type === "error") {
-              setMessage(`Error: ${data.message}`);
+              const errMsg = data.message.includes("429") || data.message.includes("quota") 
+                ? "Gemini API Quota Exceeded. Please try again later or check your API key plan." 
+                : `Error: ${data.message}`;
+              setError(errMsg);
+              setMessage("Extraction failed.");
               setExtracting(false);
             }
           } catch (e) {
@@ -198,6 +212,42 @@ export default function UploadPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Error Toast */}
+      {error && (
+        <div style={{ 
+          position: "fixed", 
+          top: 20, 
+          right: 20, 
+          zIndex: 9999, 
+          padding: "14px 24px", 
+          background: "var(--red)", 
+          color: "white", 
+          borderRadius: "var(--radius-sm)", 
+          boxShadow: "0 8px 30px rgba(214,59,59,0.3)",
+          fontSize: 14,
+          fontWeight: 500,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          animation: "toast-in 0.3s ease-out forwards",
+          maxWidth: "400px",
+          lineHeight: "1.4"
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          {error}
+          <style>{`
+            @keyframes toast-in {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
 
       {/* Extraction Result */}
       <AnimatePresence>

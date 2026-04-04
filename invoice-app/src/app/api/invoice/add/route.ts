@@ -16,11 +16,10 @@ export async function POST(req: Request) {
         const invoice = await Invoice.create({ ...body, username });
         return NextResponse.json(invoice, { status: 201 });
     } else {
-        throw new Error("DB offline");
+        throw new Error("DB connection failed");
     }
-  } catch (e) {
-    console.warn("Add Invoice DB Error or Quota, continuing in demo mode...", e);
-    const body = await req.clone().json().catch(() => ({}));
-    return NextResponse.json({ ...body, _id: "demo-" + Date.now() }, { status: 201 });
+  } catch (e: any) {
+    console.error("Add Invoice Error:", e);
+    return NextResponse.json({ error: e.message || "Failed to add invoice" }, { status: 500 });
   }
 }

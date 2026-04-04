@@ -14,14 +14,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
-        // DEMO BYPASS: Allow admin/admin if env says so or as universal fallback for UI testing
-        if (credentials.username === "admin" && credentials.password === "admin") {
-            return { id: "demo-id", name: "admin" };
-        }
-        if (credentials.username === "asharib" && credentials.password === "password") {
-            return { id: "demo-id-2", name: "asharib" };
-        }
-
         try {
             await dbConnect();
             const user = await User.findOne({ username: credentials.username });

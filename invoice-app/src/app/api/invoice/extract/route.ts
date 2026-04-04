@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         send({ type: "progress", percent: 25, message: "Sending to Gemini..." });
 
         if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your-gemini-api-key") {
-            throw new Error("Missing API Key - triggering demo mode fallback");
+            throw new Error("Missing GEMINI_API_KEY. Please configure your API key.");
         }
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -116,38 +116,9 @@ export async function POST(req: Request) {
         send({ type: "progress", percent: 100, message: "Done!" });
         send({ type: "result", data: invoiceData });
       } catch (err: any) {
-        const isQuotaError = err?.status === 429 || err?.message?.includes("429") || err?.message?.includes("quota");
-        
-        if (isQuotaError) {
-          console.warn("Gemini Quota Exceeded. Falling back to Demo Mode.");
-          send({ type: "progress", percent: 40, message: "Quota reached! Gemini is resting... (Demo Mode Active)" });
-        } else {
-          console.warn("Extraction error or demo mode, simulating result...", err);
-          send({ type: "progress", percent: 40, message: "Gemini 2.5 Flash is reading the invoice (Demo)..." });
-        }
-
-        // Simulate extraction delay
-        await new Promise(r => setTimeout(r, 800));
-        send({ type: "progress", percent: 70, message: "Extracting fields (Demo)..." });
-        await new Promise(r => setTimeout(r, 800));
-        send({ type: "progress", percent: 90, message: "Finalizing (Demo)..." });
-        await new Promise(r => setTimeout(r, 500));
-        
-        const mockResult = {
-            vendor_name: "Demo Vendor Inc.",
-            invoice_number: "INV-DEMO-123",
-            invoice_date: "03/27/2025",
-            data: [{
-                sub_total: 1000.00,
-                tps: 50.00,
-                tvq: 99.75,
-                tax: 149.75,
-                total_price: 1149.75,
-                discount: 0
-            }]
-        };
-        send({ type: "progress", percent: 100, message: "Done (Demo Mode)!" });
-        send({ type: "result", data: mockResult });
+        console.error("Extraction error:", err);
+        const errorMessage = err?.message || "Internal server error during extraction.";
+        send({ type: "error", message: errorMessage });
       } finally {
         controller.close();
       }

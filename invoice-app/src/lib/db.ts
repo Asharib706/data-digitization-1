@@ -17,8 +17,7 @@ async function dbConnect() {
   if (cached.conn) return cached.conn;
 
   if (!MONGODB_URI) {
-    console.warn("MONGODB_URI is missing, skipping DB connection (Demo Mode)");
-    return null;
+    throw new Error("MONGODB_URI is missing. Please configure your database connection string.");
   }
 
   if (!cached.promise) {
@@ -29,9 +28,9 @@ async function dbConnect() {
   try {
     cached.conn = await cached.promise;
   } catch (e) {
-    console.error("MongoDB Connection Failed (Quota or URI):", e instanceof Error ? e.message : e);
-    cached.promise = null; // Allow retry or just keep returning null
-    return null;
+    console.error("MongoDB Connection Failed:", e instanceof Error ? e.message : e);
+    cached.promise = null; // Allow retry
+    throw new Error("Failed to connect to database.");
   }
   return cached.conn;
 }
